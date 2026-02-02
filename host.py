@@ -114,13 +114,23 @@ def main() -> int:
     send_thread = threading.Thread(target=send_loop, daemon=True)
     recv_thread.start()
     send_thread.start()
-    recv_thread.join()
-    send_thread.join()
-
     try:
-        conn.close()
+        # Join in a loop with timeout so KeyboardInterrupt can be processed
+        while recv_thread.is_alive() or send_thread.is_alive():
+            recv_thread.join(timeout=0.5)
+            send_thread.join(timeout=0.5)
+    except KeyboardInterrupt:
+        print("\nInterrupted, shutting down.\n")
+        stop_event.set()
     finally:
-        sock.close()
+        try:
+            conn.close()
+        except Exception:
+            pass
+        try:
+            sock.close()
+        except Exception:
+            pass
     return 0
 
 
